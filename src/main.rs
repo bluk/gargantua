@@ -26,6 +26,11 @@ impl VersionResponse {
     }
 }
 
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+}
+
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
     dotenv::dotenv().ok();
@@ -44,6 +49,9 @@ async fn main() -> Result<(), std::io::Error> {
             let path = req.uri().path();
             match path {
                 "/version" => Ok(Response::new(StatusCode::Ok).body_json(&VersionResponse::new())?),
+                "/health" => Ok(Response::new(StatusCode::Ok).body_json(&HealthResponse {
+                    status: String::from("ok"),
+                })?),
                 _ => Ok(Response::new(StatusCode::NotFound)),
             }
         })
