@@ -1,0 +1,33 @@
+name: Production CICD
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  build_docker_image:
+    name: Build Docker Image and Push to Heroku
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Build Docker Image
+        run: docker build --file deployments/docker/Dockerfile --tag bluk/gargantua:$GITHUB_SHA --tag bluk/gargantua:latest --build-arg SOURCE_COMMIT=$GITHUB_SHA --build-arg IMAGE_TAG=$GITHUB_REF .
+      - name: Heroku Container Login
+        run: heroku container:login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      - name: Tag Docker Image for Heroku
+        run: docker tag bluk/gargantua:$GITHUB_SHA registry.heroku.com/$HEROKU_APP/web
+        env:
+          HEROKU_APP: ${{ secrets.HEROKU_APP }}
+      - name: Push Docker Image to Heroku
+        run: docker push registry.heroku.com/$HEROKU_APP/web
+        env:
+          HEROKU_APP: ${{ secrets.HEROKU_APP }}
+      - name: Release Heroku Web Container
+        run: heroku container:release web
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP: ${{ secrets.HEROKU_APP }}
