@@ -6,10 +6,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use log::info;
 use serde::Serialize;
 use std::env;
-use tide::{Request, Response, StatusCode};
+use std::str::FromStr;
+use tide::{http::headers::HeaderName, Request, Response, StatusCode};
 
 use gargantua::{log_request::LogRequest, request_id::RequestIdMiddleware};
 
@@ -47,17 +47,26 @@ async fn main() -> Result<(), std::io::Error> {
         .at("/*")
         .get(|req: Request<()>| async move {
             let path = req.uri().path();
+            let cache_control_header = HeaderName::from_str("cache-control").unwrap();
+            // let expires_header = HeaderName::from_str("expires").unwrap();
+            // let etag_header = HeaderName::from_str("etag").unwrap();
+            // let last_modified_header = HeaderName::from_str("last-modified").unwrap();
+
             match path {
-                "/version" => Ok(Response::new(StatusCode::Ok).body_json(&VersionResponse::new())?),
-                "/health" => Ok(Response::new(StatusCode::Ok).body_json(&HealthResponse {
-                    status: String::from("ok"),
-                })?),
+                "/version" => Ok(Response::new(StatusCode::Ok)
+                    .set_header(cache_control_header, "no-store, max-age=0, s-maxage=0")
+                    .body_json(&VersionResponse::new())?),
+                "/health" => Ok(Response::new(StatusCode::Ok)
+                    .set_header(cache_control_header, "no-store, max-age=0, s-maxage=0")
+                    .body_json(&HealthResponse {
+                        status: String::from("ok"),
+                    })?),
                 _ => Ok(Response::new(StatusCode::NotFound)),
             }
         })
         .all(|_: Request<()>| async move { Ok(Response::new(StatusCode::MethodNotAllowed)) });
 
-    info!("Application starting on port: {}", port);
+    log::info!("Application starting on port: {}", port);
 
     app.listen(format!("0.0.0.0:{}", port)).await
 }
