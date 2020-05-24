@@ -44,7 +44,7 @@ impl<State: Send + Sync + 'static> Middleware<State> for LogRequest {
             let method = ctx.method().to_string();
             let path = ctx.uri().path().to_owned();
             let req_id = ctx
-                .local::<RequestId>()
+                .ext::<RequestId>()
                 .map(|id| id.0.clone())
                 .unwrap_or_else(|| String::from(""));
             let start = std::time::Instant::now();

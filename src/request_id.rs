@@ -29,7 +29,7 @@ impl<State: Send + Sync + 'static> Middleware<State> for RequestIdMiddleware {
         Box::pin(async move {
             let req_id = Uuid::new_v4().to_string();
 
-            let ctx = ctx.set_local::<RequestId>(RequestId(req_id.clone()));
+            let ctx = ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
 
             let req_id_header = HeaderName::from_str("request-id").unwrap();
 
