@@ -42,7 +42,7 @@ impl<State: Send + Sync + 'static> Middleware<State> for LogRequest {
                 })
                 .unwrap_or_else(|| String::from(""));
             let method = ctx.method().to_string();
-            let path = ctx.uri().path().to_owned();
+            let path = ctx.url().path().to_owned();
             let req_id = ctx
                 .ext::<RequestId>()
                 .map(|id| id.0.clone())

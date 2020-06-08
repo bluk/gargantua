@@ -23,18 +23,18 @@ pub struct RequestIdMiddleware;
 impl<State: Send + Sync + 'static> Middleware<State> for RequestIdMiddleware {
     fn handle<'a>(
         &'a self,
-        ctx: Request<State>,
+        mut ctx: Request<State>,
         next: Next<'a, State>,
     ) -> Pin<Box<dyn Future<Output = tide::Result> + Send + 'a>> {
         Box::pin(async move {
             let req_id = Uuid::new_v4().to_string();
 
-            let ctx = ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
+            ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
 
             let req_id_header = HeaderName::from_str("request-id").unwrap();
 
             let mut res = next.run(ctx).await?;
-            res = res.set_header(req_id_header, req_id.clone());
+            res.insert_header(req_id_header, req_id.clone());
             Ok(res)
         })
     }
