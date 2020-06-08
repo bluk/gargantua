@@ -6,10 +6,13 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use http_types::headers;
 use serde::Serialize;
-use std::env;
-use std::str::FromStr;
-use tide::{http::headers::HeaderName, Body, Request, Response, StatusCode};
+use std::{
+    env,
+    time::{Duration, SystemTime},
+};
+use tide::{Body, Request, Response, StatusCode};
 
 use gargantua::{log_request::LogRequest, request_id::RequestIdMiddleware};
 
@@ -47,27 +50,34 @@ async fn main() -> Result<(), std::io::Error> {
         .at("/*")
         .get(|req: Request<()>| async move {
             let path = req.url().path();
-            let cache_control_header = HeaderName::from_str("cache-control").unwrap();
-            // let expires_header = HeaderName::from_str("expires").unwrap();
-            // let etag_header = HeaderName::from_str("etag").unwrap();
-            // let last_modified_header = HeaderName::from_str("last-modified").unwrap();
 
             match path {
                 "/version" => {
                     let mut resp = Response::new(StatusCode::Ok);
-                    resp.insert_header(cache_control_header, "no-store, max-age=0, s-maxage=0");
+                    resp.insert_header(headers::CACHE_CONTROL, "no-store, max-age=0, s-maxage=0");
                     resp.set_body(Body::from_json(&VersionResponse::new())?);
                     Ok(resp)
                 }
                 "/health" => {
                     let mut resp = Response::new(StatusCode::Ok);
-                    resp.insert_header(cache_control_header, "no-store, max-age=0, s-maxage=0");
+                    resp.insert_header(headers::CACHE_CONTROL, "no-store, max-age=0, s-maxage=0");
                     resp.set_body(Body::from_json(&HealthResponse {
                         status: String::from("ok"),
                     })?);
                     Ok(resp)
                 }
-                _ => Ok(Response::new(StatusCode::NotFound)),
+                _ => {
+                    let mut resp = Response::new(StatusCode::NotFound);
+                    resp.insert_header(
+                        headers::CACHE_CONTROL,
+                        "public, max-age=21600, s-maxage=21600, must-revalidate",
+                    );
+                    let now = SystemTime::now();
+                    resp.insert_header(headers::LAST_MODIFIED, httpdate::fmt_http_date(now));
+                    let expires = now + Duration::from_secs(60 * 60);
+                    resp.insert_header(headers::EXPIRES, httpdate::fmt_http_date(expires));
+                    Ok(resp)
+                }
             }
         })
         .all(|_: Request<()>| async move { Ok(Response::new(StatusCode::MethodNotAllowed)) });
