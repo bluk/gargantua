@@ -6,8 +6,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::future::Future;
-use std::pin::Pin;
 use std::str::FromStr;
 use tide::{http::headers::HeaderName, Middleware, Next, Request};
 use uuid::Uuid;
@@ -20,22 +18,17 @@ pub struct RequestId(pub String);
 #[derive(Debug, Default)]
 pub struct RequestIdMiddleware;
 
-impl<State: Send + Sync + 'static> Middleware<State> for RequestIdMiddleware {
-    fn handle<'a>(
-        &'a self,
-        mut ctx: Request<State>,
-        next: Next<'a, State>,
-    ) -> Pin<Box<dyn Future<Output = tide::Result> + Send + 'a>> {
-        Box::pin(async move {
-            let req_id = Uuid::new_v4().to_string();
+#[async_trait::async_trait]
+impl<State: Clone + Send + Sync + 'static> Middleware<State> for RequestIdMiddleware {
+    async fn handle(&self, mut ctx: Request<State>, next: Next<'_, State>) -> tide::Result {
+        let req_id = Uuid::new_v4().to_string();
 
-            ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
+        ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
 
-            let req_id_header = HeaderName::from_str("request-id").unwrap();
+        let req_id_header = HeaderName::from_str("request-id").unwrap();
 
-            let mut res = next.run(ctx).await?;
-            res.insert_header(req_id_header, req_id.clone());
-            Ok(res)
-        })
+        let mut res = next.run(ctx).await;
+        res.insert_header(req_id_header, req_id.clone());
+        Ok(res)
     }
 }
