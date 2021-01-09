@@ -42,8 +42,8 @@ async fn main() -> Result<(), std::io::Error> {
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
 
     let mut app = tide::new();
-    app.middleware(RequestIdMiddleware)
-        .middleware(LogRequest)
+    app.with(RequestIdMiddleware)
+        .with(LogRequest)
         .at("")
         .get(|_: Request<()>| async move { Ok(Response::new(StatusCode::NotFound)) })
         .all(|_: Request<()>| async move { Ok(Response::new(StatusCode::MethodNotAllowed)) })
