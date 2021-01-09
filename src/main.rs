@@ -6,15 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use http_types::headers;
 use serde::Serialize;
-use std::{
-    env,
-    time::{Duration, SystemTime},
-};
-use tide::{Body, Request, Response, StatusCode};
-
-use gargantua::{log_request::LogRequest, request_id::RequestIdMiddleware};
+use std::env;
+use warp::Filter;
 
 #[derive(Debug, Serialize)]
 struct VersionResponse {
@@ -34,55 +28,97 @@ struct HealthResponse {
     status: String,
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
     dotenv::dotenv().ok();
-    env_logger::init().ok();
+    let filter = env::var("RUST_LOG")
+        .unwrap_or_else(|_| String::from("tracing=info,warp=info,gargantua=info"));
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+        .init();
 
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
+    let port = port.parse::<u16>().unwrap();
 
-    let mut app = tide::new();
-    app.middleware(RequestIdMiddleware)
-        .middleware(LogRequest)
-        .at("")
-        .get(|_: Request<()>| async move { Ok(Response::new(StatusCode::NotFound)) })
-        .all(|_: Request<()>| async move { Ok(Response::new(StatusCode::MethodNotAllowed)) })
-        .at("/*")
-        .get(|req: Request<()>| async move {
-            let path = req.url().path();
+    let version = warp::path("version").and(warp::path::end()).map(|| {
+        let version = VersionResponse::new();
+        warp::reply::json(&version)
+    });
 
-            match path {
-                "/version" => {
-                    let mut resp = Response::new(StatusCode::Ok);
-                    resp.insert_header(headers::CACHE_CONTROL, "no-store, max-age=0, s-maxage=0");
-                    resp.set_body(Body::from_json(&VersionResponse::new())?);
-                    Ok(resp)
-                }
-                "/health" => {
-                    let mut resp = Response::new(StatusCode::Ok);
-                    resp.insert_header(headers::CACHE_CONTROL, "no-store, max-age=0, s-maxage=0");
-                    resp.set_body(Body::from_json(&HealthResponse {
-                        status: String::from("ok"),
-                    })?);
-                    Ok(resp)
-                }
-                _ => {
-                    let mut resp = Response::new(StatusCode::NotFound);
-                    resp.insert_header(
-                        headers::CACHE_CONTROL,
-                        "public, max-age=21600, s-maxage=21600, must-revalidate",
-                    );
-                    let now = SystemTime::now();
-                    resp.insert_header(headers::LAST_MODIFIED, httpdate::fmt_http_date(now));
-                    let expires = now + Duration::from_secs(60 * 60);
-                    resp.insert_header(headers::EXPIRES, httpdate::fmt_http_date(expires));
-                    Ok(resp)
-                }
+    let health = warp::path("health").and(warp::path::end()).map(|| {
+        let health = HealthResponse {
+            status: String::from("ok"),
+        };
+        warp::reply::json(&health)
+    });
+
+    let not_found_cached_get = warp::get().map(|| {
+        let reply = warp::reply();
+        let reply = warp::reply::with_status(reply, warp::http::StatusCode::NOT_FOUND);
+        let reply = warp::reply::with_header(
+            reply,
+            warp::http::header::CACHE_CONTROL,
+            "public, max-age=21600, s-maxage=21600, must-revalidate",
+        );
+        let now = std::time::SystemTime::now();
+        let reply = warp::reply::with_header(
+            reply,
+            warp::http::header::LAST_MODIFIED,
+            httpdate::fmt_http_date(now),
+        );
+        let expires = now + std::time::Duration::from_secs(60 * 60);
+        let reply = warp::reply::with_header(
+            reply,
+            warp::http::header::EXPIRES,
+            httpdate::fmt_http_date(expires),
+        );
+        reply
+    });
+
+    let routes = warp::get()
+        .and(version.or(health).map(|reply| {
+            warp::reply::with_header(
+                reply,
+                hyper::header::CACHE_CONTROL,
+                "no-store, max-age=0, s-maxage=0",
+            )
+        }))
+        .or(not_found_cached_get)
+        .with(warp::trace(|info| {
+            use tracing::field::{display, Empty};
+            use warp::http::header;
+
+            // TODO: Return status code
+            // TODO: Elapsed time
+            // TODO: Error message (if any)
+            // TODO: Request-ID
+
+            let span = tracing::info_span!(
+                "request",
+                host = Empty,
+                method = %info.method(),
+                path = %info.path(),
+                origin = Empty,
+            );
+
+            let headers = info.request_headers();
+
+            if let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) {
+                span.record("host", &display(host));
             }
-        })
-        .all(|_: Request<()>| async move { Ok(Response::new(StatusCode::MethodNotAllowed)) });
+
+            if let Some(origin) = headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) {
+                span.record("origin", &display(origin));
+            }
+
+            span
+        }));
 
     log::info!("Application starting on port: {}", port);
 
-    app.listen(format!("0.0.0.0:{}", port)).await
+    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
+
+    Ok(())
 }
