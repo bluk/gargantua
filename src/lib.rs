@@ -1,4 +1,4 @@
-// Copyright 2020 Bryant Luk
+// Copyright 2022 Bryant Luk
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -6,5 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-pub mod log_request;
+pub mod fallback;
+pub mod health;
 pub mod request_id;
+pub mod version;

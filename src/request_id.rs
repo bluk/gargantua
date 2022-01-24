@@ -1,4 +1,4 @@
-// Copyright 2020 Bryant Luk
+// Copyright 2022 Bryant Luk
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -6,29 +6,18 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::str::FromStr;
-use tide::{http::headers::HeaderName, Middleware, Next, Request};
+use http::Request;
+use tower_http::request_id::{MakeRequestId, RequestId};
 use uuid::Uuid;
 
-/// Identifies a request.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct RequestId(pub String);
+pub const REQUEST_ID_HEADER_NAME: &str = "request-id";
 
-/// Sets a request ID in the local context and as a response header.
-#[derive(Debug, Default)]
-pub struct RequestIdMiddleware;
+#[derive(Clone, Copy)]
+pub struct MakeRequestUuid;
 
-#[async_trait::async_trait]
-impl<State: Clone + Send + Sync + 'static> Middleware<State> for RequestIdMiddleware {
-    async fn handle(&self, mut ctx: Request<State>, next: Next<'_, State>) -> tide::Result {
-        let req_id = Uuid::new_v4().to_string();
-
-        ctx.set_ext::<RequestId>(RequestId(req_id.clone()));
-
-        let req_id_header = HeaderName::from_str("request-id").unwrap();
-
-        let mut res = next.run(ctx).await;
-        res.insert_header(req_id_header, req_id.clone());
-        Ok(res)
+impl MakeRequestId for MakeRequestUuid {
+    fn make_request_id<B>(&mut self, _request: &Request<B>) -> Option<RequestId> {
+        let request_id = Uuid::new_v4().to_string().parse().unwrap();
+        Some(RequestId::new(request_id))
     }
 }
