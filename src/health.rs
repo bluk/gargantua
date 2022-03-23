@@ -11,7 +11,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use http::StatusCode;
-use serde::Serialize;
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 struct HealthResponse {

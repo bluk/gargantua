@@ -11,7 +11,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use http::StatusCode;
-use serde::Serialize;
+use serde_derive::Serialize;
 use std::env;
 
 #[derive(Debug, Serialize)]
