@@ -21,7 +21,7 @@ struct VersionResponse {
 
 impl VersionResponse {
     fn new() -> Self {
-        let commit = env::var("SOURCE_COMMIT").unwrap_or_else(|_| String::from(""));
+        let commit = env::var("SOURCE_COMMIT").unwrap_or_else(|_| String::new());
 
         Self { commit }
     }
