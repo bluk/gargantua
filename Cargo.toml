@@ -1,6 +1,6 @@
 [package]
 name = "gargantua"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Bryant Luk <bryant.luk@bryantluk.com>"]
 edition = "2021"
 publish = false
