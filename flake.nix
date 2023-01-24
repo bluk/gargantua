@@ -68,8 +68,8 @@
 
               package = lib.mkOption {
                 type = lib.types.package;
-                # default = pkgs.gargantua;
-                default = self.packages.${pkgs.system}.default;
+                default = pkgs.gargantua;
+                # default = self.packages.${pkgs.system}.default;
                 defaultText = lib.literalExpression "pkgs.gargantua";
                 description = lib.mdDoc "Package to use.";
               };
