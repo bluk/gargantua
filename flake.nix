@@ -14,7 +14,9 @@
   outputs = { self, nixpkgs, flake-utils, naersk }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = (import nixpkgs) {
+          inherit system;
+        };
         naersk' = pkgs.callPackage naersk { };
       in rec {
         defaultPackage = naersk'.buildPackage { src = ./.; };
@@ -28,23 +30,22 @@
           exePath = "/bin/${name}";
         };
 
-        devShell = with pkgs;
-          mkShell {
-            buildInputs = [
-              cargo
-              cargo-watch
-              rustc
-              rust-analyzer
-              rustfmt
-              rustPackages.clippy
+        devShell = pkgs.mkShell {
+          nativeBuildInputs = with pkgs; [
+            cargo
+            cargo-watch
+            rustc
+            rust-analyzer
+            rustfmt
+            rustPackages.clippy
 
-              pkg-config
-              openssl
-              cmake
-            ];
-            RUST_LOG = "debug";
-            RUST_SRC_PATH = rustPlatform.rustLibSrc;
-          };
+            pkg-config
+            openssl
+            cmake
+          ];
+          RUST_LOG = "debug";
+          RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+        };
 
       }) // {
         nixosModule = { config, lib, pkgs, ... }:
@@ -68,9 +69,10 @@
 
               package = lib.mkOption {
                 type = lib.types.package;
-                default = nixpkgs.legacyPackages.${pkgs.system}.gargantua;
+                # default = nixpkgs.legacyPackages.${pkgs.system}.gargantua;
                 # default = pkgs.gargantua;
                 # default = self.packages.${pkgs.system}.default;
+                default = self.defaultPackage."${pkgs.system}";
                 defaultText = lib.literalExpression "pkgs.gargantua";
                 description = lib.mdDoc "Package to use.";
               };
