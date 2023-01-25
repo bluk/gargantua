@@ -19,7 +19,11 @@
         };
         naersk' = pkgs.callPackage naersk { };
       in rec {
-        defaultPackage = naersk'.buildPackage { src = ./.; };
+        defaultPackage = naersk'.buildPackage {
+        src = ./.;
+         nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs = with pkgs; [ openssl ];
+        };
 
         defaultApp = let
           drv = self.defaultPackage."${system}";
