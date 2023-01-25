@@ -23,6 +23,7 @@
         src = ./.;
          nativeBuildInputs = with pkgs; [ pkg-config ];
           buildInputs = with pkgs; [ openssl ];
+          RUSTFLAGS="-Ctarget-feature=-outline-atomics";
         };
 
         defaultApp = let
