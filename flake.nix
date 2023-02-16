@@ -34,16 +34,6 @@
               src = if inShell then null else ./.;
 
               cargoLock = { lockFile = ./Cargo.lock; };
-
-              # Use cargoLock above instead of manual hashes.
-              # Use:
-              # ```
-              # cargoSha256 = lib.fakeSha256;
-              # ```
-              # initially and then build the package. Get the correct value from
-              # the error message.
-              #cargoSha256 =
-              #  "sha256-a0Fe3GT9dR74W3R56hXDChOioVZWl2A57MbkhCkS/bE=";
             }) { };
       };
 
@@ -82,9 +72,7 @@
 
             package = lib.mkOption {
               type = lib.types.package;
-              # default = pkgs.gargantua;
-              # default = pkgs.legacyPackages.${pkgs.system}.gargantua;
-              default = self.packages.${pkgs.system}.default;
+              default = pkgs.gargantua;
               defaultText = lib.literalExpression "pkgs.gargantua";
               description = lib.mdDoc "Package to use.";
             };
