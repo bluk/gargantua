@@ -28,7 +28,7 @@
             final.rustPlatform.buildRustPackage rec {
               pname = "gargantua";
               # Version of this package (not necessarily the same version as in Cargo.toml but probably should be).
-              version = "0.4.0";
+              version = "0.5.0";
 
               # Ignore the source code if used in 'nix develop'.
               src = if inShell then null else ./.;
