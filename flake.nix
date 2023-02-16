@@ -134,6 +134,10 @@
               (lib.attrsets.setAttrByPath [ cfg.user "packages" ]
                 [ cfg.package ])
             ];
+
+            users.groups = lib.mkIf (cfg.group == "gargantua") {
+              gargantua = { };
+            };
           };
         };
     };
