@@ -22,7 +22,7 @@ use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
 
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
 
