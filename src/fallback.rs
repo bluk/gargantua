@@ -13,6 +13,7 @@ use axum::{
 use http::StatusCode;
 use std::time::{Duration, SystemTime};
 
+#[allow(clippy::unused_async, clippy::missing_panics_doc)]
 pub async fn get_not_found() -> impl IntoResponse {
     let now = SystemTime::now();
     let expires = now + Duration::from_secs(60 * 60);
@@ -33,6 +34,7 @@ pub async fn get_not_found() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, headers)
 }
 
+#[allow(clippy::unused_async)]
 pub async fn any_method_not_allowed() -> impl IntoResponse {
     StatusCode::METHOD_NOT_ALLOWED
 }

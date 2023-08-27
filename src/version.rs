@@ -27,7 +27,8 @@ impl VersionResponse {
     }
 }
 
-pub async fn get_version() -> impl IntoResponse {
+#[allow(clippy::unused_async)]
+pub async fn get() -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(
         HeaderName::from_static("cache-control"),

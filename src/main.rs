@@ -31,8 +31,8 @@ async fn main() {
     let request_id_header = HeaderName::from_static(gargantua::request_id::REQUEST_ID_HEADER_NAME);
 
     let app = Router::new()
-        .route("/version", get(gargantua::version::get_version))
-        .route("/health", get(gargantua::health::get_health))
+        .route("/version", get(gargantua::version::get))
+        .route("/health", get(gargantua::health::get))
         .fallback_service(
             any(gargantua::fallback::any_method_not_allowed)
                 .get(gargantua::fallback::get_not_found),
@@ -88,8 +88,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     println!("signal received, starting graceful shutdown");
