@@ -61,10 +61,12 @@
             DynamicUser = true;
             User = cfg.user;
             Group = cfg.group;
+            RuntimeDirectory = "gargantua";
             StateDirectory = "gargantua";
             StateDirectoryMode = "0750";
             LogsDirectory = "gargantua";
             LogsDirectoryMode = "0750";
+            CacheDirectory = "gargantua";
           };
         in {
           options.services.gargantua = {
@@ -86,16 +88,16 @@
             };
 
             port = mkOption {
-              default = 8080;
               type = types.port;
+              default = 8080;
               description = lib.mdDoc ''
                 TCP port used to listen on.
               '';
             };
 
             user = lib.mkOption {
-              default = "gargantua";
               type = lib.types.str;
+              default = "gargantua";
               description = lib.mdDoc ''
                 User which the service will run as. If it is set to "gargantua", that
                 user will be created.
@@ -103,8 +105,8 @@
             };
 
             group = lib.mkOption {
-              default = "gargantua";
               type = lib.types.str;
+              default = "gargantua";
               description = lib.mdDoc ''
                 Group which the service will run as. If it is set to "gargantua", that
                 group will be created.
