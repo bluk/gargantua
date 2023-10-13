@@ -33,6 +33,7 @@ async fn main() {
     let app = Router::new()
         .route("/version", get(gargantua::version::get))
         .route("/health", get(gargantua::health::get))
+        .route("/env", get(gargantua::env::get))
         .fallback_service(
             any(gargantua::fallback::any_method_not_allowed)
                 .get(gargantua::fallback::get_not_found),
