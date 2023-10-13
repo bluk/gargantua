@@ -59,13 +59,10 @@
 
           cfgService = {
             DynamicUser = true;
-            User = cfg.user;
-            Group = cfg.group;
+            ConfigurationDirectory = "gargantua";
             RuntimeDirectory = "gargantua";
             StateDirectory = "gargantua";
-            StateDirectoryMode = "0750";
             LogsDirectory = "gargantua";
-            LogsDirectoryMode = "0750";
             CacheDirectory = "gargantua";
           };
         in {
@@ -94,24 +91,6 @@
                 TCP port used to listen on.
               '';
             };
-
-            user = lib.mkOption {
-              type = lib.types.str;
-              default = "gargantua";
-              description = lib.mdDoc ''
-                User which the service will run as. If it is set to "gargantua", that
-                user will be created.
-              '';
-            };
-
-            group = lib.mkOption {
-              type = lib.types.str;
-              default = "gargantua";
-              description = lib.mdDoc ''
-                Group which the service will run as. If it is set to "gargantua", that
-                group will be created.
-              '';
-            };
           };
 
           config = lib.mkIf cfg.enable {
@@ -123,22 +102,6 @@
               serviceConfig = {
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;
-            };
-
-            users.users = lib.mkMerge [
-              (lib.mkIf (cfg.user == "gargantua") {
-                gargantua = {
-                  isSystemUser = true;
-                  home = cfg.package;
-                  inherit (cfg) group;
-                };
-              })
-              (lib.attrsets.setAttrByPath [ cfg.user "packages" ]
-                [ cfg.package ])
-            ];
-
-            users.groups = lib.mkIf (cfg.group == "gargantua") {
-              gargantua = { };
             };
           };
         };
