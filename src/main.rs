@@ -11,10 +11,11 @@ use axum::{
     routing::{any, get},
     Router,
 };
-use std::env;
+use std::{env, path::PathBuf};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
+    services::{ServeDir, ServeFile},
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
@@ -25,15 +26,29 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
+    let assets_dir = {
+        let mut path = PathBuf::from(
+            env::var("STATE_DIRECTORY").unwrap_or_else(|_| String::from("/var/lib/gargantua")),
+        );
+        path.push("static");
+        path
+    };
 
     tracing_subscriber::fmt::init();
 
     let request_id_header = HeaderName::from_static(gargantua::request_id::REQUEST_ID_HEADER_NAME);
 
+    let mut not_found = assets_dir.clone();
+    not_found.push("not_found.html");
+
     let app = Router::new()
         .route("/version", get(gargantua::version::get))
         .route("/health", get(gargantua::health::get))
         .route("/env", get(gargantua::env::get))
+        .nest_service(
+            "/assets",
+            ServeDir::new(assets_dir.clone()).not_found_service(ServeFile::new(not_found)),
+        )
         .fallback_service(
             any(gargantua::fallback::any_method_not_allowed)
                 .get(gargantua::fallback::get_not_found),
