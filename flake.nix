@@ -34,6 +34,10 @@
               src = if inShell then null else ./.;
 
               cargoLock = { lockFile = ./Cargo.lock; };
+
+              postInstall = if inShell then null else lib.optionalString stdenv.isLinux ''
+                cp -rf $src/resources $out/resources
+              '';
             }) { };
       };
 
@@ -100,6 +104,11 @@
               environment = { PORT = "${toString cfg.port}"; };
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
+                ExecStartPre = [
+                 "-${pkgs.coreutils}/bin/rm -r /var/lib/gargantua/static"
+                 # "${pkgs.coreutils}/bin/mkdir -p /var/lib/gargantua/static"
+                 "${pkgs.coreutils}/bin/cp -rf ${cfg.package}/resources/static /var/lib/gargantua/"
+                ];
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;
             };
