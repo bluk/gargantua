@@ -95,9 +95,21 @@
                 TCP port used to listen on.
               '';
             };
+
+            configDir = mkOption {
+              type = types.path;
+              description = lib.mdDoc ''
+                Path to config file directory.
+              '';
+            };
           };
 
           config = lib.mkIf cfg.enable {
+
+            environment.etc = {
+              gargantua.source = cfg.configDir;
+            };
+
             systemd.services.gargantua = {
               after = [ "network.target" ];
 
@@ -107,7 +119,7 @@
                 ExecStartPre = [
                  "-${pkgs.coreutils}/bin/rm -r /var/lib/gargantua/static"
                  # "${pkgs.coreutils}/bin/mkdir -p /var/lib/gargantua/static"
-                 "${pkgs.coreutils}/bin/cp -rf ${cfg.package}/resources/static /var/lib/gargantua/"
+                 "${pkgs.coreutils}/bin/cp -rf ${cfg.package}/resources/state/static /var/lib/gargantua/"
                 ];
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;

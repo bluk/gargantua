@@ -11,7 +11,13 @@ use axum::{
     routing::{any, get},
     Router,
 };
-use std::{env, path::PathBuf};
+use kdl::KdlDocument;
+use std::{
+    env,
+    fs::File,
+    io::{self, Read},
+    path::PathBuf,
+};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -19,11 +25,13 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
-use tracing::{info, Level};
+use tracing::{debug, info, Level};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> io::Result<()> {
     dotenvy::dotenv().ok();
+
+    tracing_subscriber::fmt::init();
 
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
     let assets_dir = {
@@ -33,8 +41,33 @@ async fn main() {
         path.push("static");
         path
     };
+    let config_dir = PathBuf::from(
+        env::var("CONFIGURATION_DIRECTORY").unwrap_or_else(|_| String::from("/etc/gargantua")),
+    );
+    let config_file_path = {
+        let mut path = config_dir.clone();
+        path.push("config.kdl");
+        path
+    };
+    debug!(?config_file_path, "Config file path");
 
-    tracing_subscriber::fmt::init();
+    let mut config_file = File::open(config_file_path)?;
+    let mut config_contents = String::new();
+    config_file.read_to_string(&mut config_contents)?;
+
+    let config_doc: KdlDocument = config_contents
+        .parse()
+        .expect("config file was not valid KDL");
+
+    let config_desc = config_doc
+        .get("config")
+        .and_then(|config| config.children())
+        .map(|config| config.get_args("description"))
+        .and_then(|desc| desc.first().map(|v| v.as_string()))
+        .flatten()
+        .unwrap_or("No description");
+
+    info!(config_desc, "Config description");
 
     let request_id_header = HeaderName::from_static(gargantua::request_id::REQUEST_ID_HEADER_NAME);
 
@@ -83,6 +116,8 @@ async fn main() {
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 async fn shutdown_signal() {
