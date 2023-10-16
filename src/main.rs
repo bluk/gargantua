@@ -31,7 +31,17 @@ use tracing::{debug, info, Level};
 async fn main() -> io::Result<()> {
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::fmt::init();
+    #[cfg(feature = "tracing-journald")]
+    {
+        use tracing_subscriber::prelude::*;
+        let journald = tracing_journald::layer().expect("journald should be available");
+        tracing_subscriber::registry().with(journald).init();
+    }
+
+    #[cfg(not(feature = "tracing-journald"))]
+    {
+        tracing_subscriber::fmt::init();
+    }
 
     let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
     let assets_dir = {
