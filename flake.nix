@@ -118,7 +118,10 @@
             systemd.services.gargantua = {
               after = [ "network.target" ];
 
-              environment = { PORT = "${toString cfg.port}"; };
+              environment = {
+                  PORT = "${toString cfg.port}";
+                  RUST_LOG = "debug";
+              };
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
                 ExecStartPre = [
