@@ -108,13 +108,6 @@
                 Path to config file directory.
               '';
             };
-
-            certHostName = mkOption {
-              type = types.str;
-              description = lib.mdDoc ''
-                Hostname to generate TLS certificate for
-              '';
-            };
           };
 
           config = lib.mkIf cfg.enable {
@@ -147,20 +140,6 @@
                 ];
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;
-            };
-
-            systemd.services.gargantua-certs = {
-              after = [ "network.target" ];
-              wantedBy = [ "multi-user.target" ];
-
-              serviceConfig = {
-                Type = "oneshot";
-                ConfigurationDirectory = "tailscale-certs";
-              };
-
-              script = with pkgs; ''
-              ${pkgs.tailscale}/bin/tailscale cert --cert-file /etc/tailscale-certs/host.crt --key-file /etc/tailscale-certs/host.key ${cfg.certHostName}
-              '';
             };
           };
         };
