@@ -66,7 +66,6 @@
           cfgService = {
             DynamicUser = true;
             ConfigurationDirectory = "gargantua";
-            ConfigurationDirectoryMode = "0750";
             RuntimeDirectory = "gargantua";
             RuntimeDirectoryMode = "0750";
             StateDirectory = "gargantua";
@@ -109,6 +108,13 @@
                 Path to config file directory.
               '';
             };
+
+            certHostName = mkOption {
+              type = types.str;
+              description = lib.mdDoc ''
+                Hostname to generate TLS certificate for
+              '';
+            };
           };
 
           config = lib.mkIf cfg.enable {
@@ -118,13 +124,14 @@
             };
 
             systemd.services.gargantua = {
-              after = [ "network.target" ];
+              after = [ "network.target" "gargantua-certs.service" ];
+              wants = [ "network.target" "gargantua-certs.service" ];
+              wantedBy = [ "multi-user.target" ];
 
               environment = {
                   PORT = "${toString cfg.port}";
                   RUST_LOG = "debug";
               };
-              wantedBy = [ "multi-user.target" ];
               serviceConfig = {
                 ExecStartPre = [
                  "-${pkgs.coreutils}/bin/chmod -R 0750 /run/gargantua"
@@ -140,6 +147,25 @@
                 ];
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;
+            };
+
+            systemd.services.gargantua-certs = {
+              after = [ "network.target" ];
+              wantedBy = [ "multi-user.target" ];
+
+              serviceConfig = {
+                Type = "oneshot";
+                DynamicUser = true;
+                StateDirectory = "gargantua";
+                StateDirectoryMode = "0750";
+              };
+
+              script = with pkgs; ''
+              ${pkgs.coreutils}/bin/mkdir /var/lib/gargantua/certs
+              ${pkgs.coreutils}/bin/chmod -R 0700 /var/lib/gargantua/certs
+
+              ${pkgs.tailscale}/bin/tailscale cert --cert-file /var/lib/gargantua/certs/host.crt --key-file /var/lib/gargantua/certs/host.key ${cfg.certHostName}
+              '';
             };
           };
         };
