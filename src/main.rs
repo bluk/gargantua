@@ -11,12 +11,15 @@ use axum::{
     routing::{any, get},
     Router,
 };
+use axum_server::tls_rustls::RustlsConfig;
 use kdl::KdlDocument;
 use std::{
     env,
     fs::File,
     io::{self, Read},
+    net::SocketAddr,
     path::PathBuf,
+    time::Duration,
 };
 use tokio::signal;
 use tower::ServiceBuilder;
@@ -25,8 +28,9 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
-use tracing::{debug, info, Level};
+use tracing::{info, Level};
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> io::Result<()> {
     dotenvy::dotenv().ok();
@@ -46,7 +50,6 @@ async fn main() -> io::Result<()> {
         tracing_subscriber::fmt::init();
     }
 
-    let port = env::var("PORT").unwrap_or_else(|_| String::from("8080"));
     let assets_dir = {
         let mut path = PathBuf::from(
             env::var("STATE_DIRECTORY").unwrap_or_else(|_| String::from("/var/lib/gargantua")),
@@ -54,6 +57,7 @@ async fn main() -> io::Result<()> {
         path.push("static");
         path
     };
+
     let config_dir = PathBuf::from(
         env::var("CONFIGURATION_DIRECTORY").unwrap_or_else(|_| String::from("/etc/gargantua")),
     );
@@ -62,25 +66,26 @@ async fn main() -> io::Result<()> {
         path.push("config.kdl");
         path
     };
-    debug!(?config_file_path, "Config file path");
 
     let mut config_file = File::open(config_file_path)?;
     let mut config_contents = String::new();
     config_file.read_to_string(&mut config_contents)?;
 
-    let config_doc: KdlDocument = config_contents
-        .parse()
-        .expect("config file was not valid KDL");
-
-    let config_desc = config_doc
+    let config_doc = config_contents
+        .parse::<KdlDocument>()
+        .expect("config file should be valid KDL");
+    let config_doc = config_doc
         .get("config")
         .and_then(|config| config.children())
-        .map(|config| config.get_args("description"))
-        .and_then(|desc| desc.first().map(|v| v.as_string()))
-        .flatten()
-        .unwrap_or("No description");
+        .expect("KDL configuration should have config node");
 
-    info!(config_desc, "Config description");
+    let port = config_doc
+        .get_arg("port")
+        .and_then(kdl::KdlValue::as_i64)
+        .and_then(|port| u16::try_from(port).ok())
+        .unwrap_or(8080);
+
+    let tls_config = tls_config(config_doc).await;
 
     let request_id_header = HeaderName::from_static(gargantua::request_id::REQUEST_ID_HEADER_NAME);
 
@@ -122,18 +127,42 @@ async fn main() -> io::Result<()> {
                 .propagate_request_id(request_id_header),
         );
 
+    let handle = axum_server::Handle::new();
+    let _shutdown_future = shutdown_signal(handle.clone());
+
     info!(?port, "Application starting on port: {}", port);
 
-    axum::Server::bind(&format!("0.0.0.0:{port}").parse().unwrap())
-        .serve(app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+    if let Some(tls_config) = tls_config {
+        axum_server::bind_rustls(addr, tls_config)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    } else {
+        axum_server::bind(addr)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    }
 
     Ok(())
 }
 
-async fn shutdown_signal() {
+async fn tls_config(config: &KdlDocument) -> Option<RustlsConfig> {
+    let tls_children = config.get("tls")?.children()?;
+    let cert_path = tls_children.get_arg("cert_path")?.as_string()?;
+    let key_path = tls_children.get_arg("key_path")?.as_string()?;
+
+    let cert_path = PathBuf::from(cert_path);
+    let key_path = PathBuf::from(key_path);
+
+    RustlsConfig::from_pem_file(cert_path, key_path).await.ok()
+}
+
+async fn shutdown_signal(handle: axum_server::Handle) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -156,5 +185,7 @@ async fn shutdown_signal() {
         () = terminate => {},
     }
 
-    println!("signal received, starting graceful shutdown");
+    info!("signal received, starting graceful shutdown");
+
+    handle.graceful_shutdown(Some(Duration::from_secs(10)));
 }
