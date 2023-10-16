@@ -64,10 +64,15 @@
           cfgService = {
             DynamicUser = true;
             ConfigurationDirectory = "gargantua";
+            ConfigurationDirectoryMode = "0750";
             RuntimeDirectory = "gargantua";
+            RuntimeDirectoryMode = "0750";
             StateDirectory = "gargantua";
+            StateDirectoryMode = "0750";
             LogsDirectory = "gargantua";
+            LogsDirectoryMode = "0750";
             CacheDirectory = "gargantua";
+            CacheDirectoryMode = "0750";
           };
         in {
           options.services.gargantua = {
@@ -117,9 +122,16 @@
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
                 ExecStartPre = [
-                 "-${pkgs.coreutils}/bin/rm -r /var/lib/gargantua/static"
-                 # "${pkgs.coreutils}/bin/mkdir -p /var/lib/gargantua/static"
-                 "${pkgs.coreutils}/bin/cp -rf ${cfg.package}/resources/state/static /var/lib/gargantua/"
+                 "-${pkgs.coreutils}/bin/chmod -R 0750 /run/gargantua"
+                 "-${pkgs.coreutils}/bin/chmod -R 0750 /var/lib/gargantua"
+                 "-${pkgs.coreutils}/bin/chmod -R 0750 /var/cache/gargantua"
+                 "-${pkgs.coreutils}/bin/chmod -R 0750 /var/log/gargantua"
+                 "-${pkgs.coreutils}/bin/rm -rf /var/lib/gargantua/static"
+                 "${pkgs.coreutils}/bin/cp -r ${cfg.package}/resources/state/static /var/lib/gargantua/"
+                 "${pkgs.coreutils}/bin/chmod -R 0750 /run/gargantua"
+                 "${pkgs.coreutils}/bin/chmod -R 0750 /var/lib/gargantua"
+                 "${pkgs.coreutils}/bin/chmod -R 0750 /var/cache/gargantua"
+                 "${pkgs.coreutils}/bin/chmod -R 0750 /var/log/gargantua"
                 ];
                 ExecStart = "${cfg.package}/bin/gargantua";
               } // cfgService;
