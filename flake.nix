@@ -155,16 +155,11 @@
 
               serviceConfig = {
                 Type = "oneshot";
-                DynamicUser = true;
-                StateDirectory = "gargantua";
-                StateDirectoryMode = "0750";
+                ConfigurationDirectory = "tailscale-certs";
               };
 
               script = with pkgs; ''
-              ${pkgs.coreutils}/bin/mkdir /var/lib/gargantua/certs
-              ${pkgs.coreutils}/bin/chmod -R 0700 /var/lib/gargantua/certs
-
-              ${pkgs.tailscale}/bin/tailscale cert --cert-file /var/lib/gargantua/certs/host.crt --key-file /var/lib/gargantua/certs/host.key ${cfg.certHostName}
+              ${pkgs.tailscale}/bin/tailscale cert --cert-file /etc/tailscale-certs/host.crt --key-file /etc/tailscale-certs/host.key ${cfg.certHostName}
               '';
             };
           };
