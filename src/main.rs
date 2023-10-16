@@ -31,14 +31,17 @@ use tracing::{debug, info, Level};
 async fn main() -> io::Result<()> {
     dotenvy::dotenv().ok();
 
-    #[cfg(feature = "tracing-journald")]
+    #[cfg(target_os = "linux")]
     {
-        use tracing_subscriber::prelude::*;
-        let journald = tracing_journald::layer().expect("journald should be available");
-        tracing_subscriber::registry().with(journald).init();
+        if libsystemd::logging::connected_to_journal() {
+            use tracing_subscriber::prelude::*;
+            let journald = tracing_journald::layer().expect("journald should be available");
+            tracing_subscriber::registry().with(journald).init();
+        } else {
+            tracing_subscriber::fmt::init();
+        }
     }
-
-    #[cfg(not(feature = "tracing-journald"))]
+    #[cfg(not(target_os = "linux"))]
     {
         tracing_subscriber::fmt::init();
     }

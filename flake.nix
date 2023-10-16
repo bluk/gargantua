@@ -33,7 +33,7 @@
               # Ignore the source code if used in 'nix develop'.
               src = if inShell then null else ./.;
 
-              cargoBuildFlags = [ "--features tracing-journald"];
+              # cargoBuildFlags = [ "--features tracing-journald"];
 
               cargoLock = { lockFile = ./Cargo.lock; };
 
