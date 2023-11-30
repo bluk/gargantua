@@ -10,7 +10,7 @@ rust-version = "1.65.0"
 axum = "0.6"
 axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 dotenvy = "0.15.7"
-http = { version = "0.2" }
+http = { version = "1.0" }
 httpdate = "1.0.2"
 hyper = { version = "0.14", features = ["server", "http2", "http1"] }
 kdl = "4.6.0"
