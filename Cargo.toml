@@ -7,7 +7,7 @@ publish = false
 rust-version = "1.65.0"
 
 [dependencies]
-axum = "0.6"
+axum = "0.7"
 axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 dotenvy = "0.15.7"
 http = { version = "0.2" }
