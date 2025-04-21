@@ -81,7 +81,7 @@ async fn main() -> io::Result<()> {
 
     let port = config_doc
         .get_arg("port")
-        .and_then(kdl::KdlValue::as_i64)
+        .and_then(kdl::KdlValue::as_integer)
         .and_then(|port| u16::try_from(port).ok())
         .unwrap_or(8080);
 
