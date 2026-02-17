@@ -8,7 +8,7 @@ rust-version = "1.86.0"
 
 [dependencies]
 axum = "0.8"
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
 dotenvy = "0.15.7"
 http = "1.0"
 httpdate = "1.0.2"

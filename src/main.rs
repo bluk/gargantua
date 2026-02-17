@@ -162,7 +162,10 @@ async fn tls_config(config: &KdlDocument) -> Option<RustlsConfig> {
     RustlsConfig::from_pem_file(cert_path, key_path).await.ok()
 }
 
-async fn shutdown_signal(handle: axum_server::Handle) {
+async fn shutdown_signal<A>(handle: axum_server::Handle<A>)
+where
+    A: axum_server::Address,
+{
     let ctrl_c = async {
         signal::ctrl_c()
             .await
